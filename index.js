@@ -386,7 +386,7 @@ class DeSia {
         throw `Key of type ${blockType} is invalid.`;
     }
   }
-  readBlock() {
+  readBlock(topLevel = false) {
     const blockType = this.readUInt8();
     switch (blockType) {
       case SIA_TYPES.utfz: {
@@ -526,7 +526,7 @@ class DeSia {
         let curr = this.buffer[this.offset];
         while (curr !== SIA_TYPES.mapEnd) {
           map.set(this.readBlock(), this.readBlock());
-          curr = this.buffer[this.offset];
+          curr = this.buffer[topLevel ? this.offset : this.offset++];
         }
         return map;
       }
@@ -538,6 +538,7 @@ class DeSia {
           set.add(this.readBlock());
           curr = this.buffer[this.offset];
         }
+        this.offset++;
         return set;
       }
 
@@ -610,7 +611,7 @@ class DeSia {
   deserialize(buffer) {
     this.buffer = buffer;
     this.reset();
-    return this.readBlock();
+    return this.readBlock(true);
   }
 }
 
