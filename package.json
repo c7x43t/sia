@@ -1,8 +1,9 @@
 {
-  "name": "sializer",
-  "version": "0.2.0",
+  "name": "@valentech/sializer",
+  "version": "0.2.2",
   "description": "",
   "main": "index.js",
+  "url": "https://github.com/c7x43t/sia",
   "scripts": {
     "test": "jest --collect-coverage",
     "test:nocov": "jest",

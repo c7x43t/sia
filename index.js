@@ -292,6 +292,31 @@ class Sia {
             }
             return;
           }
+          case ArrayBuffer: {
+            const { byteLength } = item;
+            if (byteLength < 0x100) {
+              this.writeUInt8(SIA_TYPES.bin8);
+              this.writeUInt8(byteLength);
+              new Uint8Array(item).forEach((byte) => {
+                this.writeUInt8(byte);
+              });
+            } else if (byteLength < 0x10000) {
+              this.writeUInt8(SIA_TYPES.bin16);
+              this.writeUInt16(byteLength);
+              new Uint8Array(item).forEach((byte) => {
+                this.writeUInt8(byte);
+              });
+            } else if (byteLength < 0x100000000) {
+              this.writeUInt8(SIA_TYPES.bin32);
+              this.writeUInt32(byteLength);
+              new Uint8Array(item).forEach((byte) => {
+                this.writeUInt8(byte);
+              });
+            } else {
+              throw `ArrayBuffer of size ${byteLength} is too big to serialize`;
+            }
+            return;
+          }
 
           default:
             this.addCustomType(item, constructor);
