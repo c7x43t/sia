@@ -228,5 +228,4 @@ const read = (src, position, length) => {
   return readLong(src, position, length);
 };
 
-module.exports.write = write;
-module.exports.read = read;
+export default { write, read };

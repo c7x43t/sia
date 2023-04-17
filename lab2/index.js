@@ -1,6 +1,6 @@
 import builtinConstructors from "./constructors.js";
 import SIA_TYPES from "./types.js";
-import utfz from "./utfz.js";
+import utfz from '@valentech/utfz-lib';
 import packr from "../benchmark/msgpackr.js";
 
 class Sia {
@@ -50,20 +50,23 @@ class Sia {
     this.offset += 8;
   }
   addString(string) {
+´´
     const { length } = string;
     // See benchmarks/string/both
-    const maxBytes = length * 3;
-    if (maxBytes < 180) {
-      this.writeUInt8(SIA_TYPES.string8);
-      const byteLength = packr.write(
-        this.buffer,
-        this.offset + 1,
+    if (length < 60) {
+      this.writeUInt8(SIA_TYPES.utfz);
+      const byteLength = utfz.pack(
         string,
-        length
+        length,
+        this.buffer,
+        this.offset + 1
       );
       this.buffer.writeUInt8(byteLength, this.offset);
       this.offset += byteLength + 1;
-    } else if (maxBytes < 0x100) {
+      return;
+    }
+    const maxBytes = length * 3;
+    if (maxBytes < 0x100) {
       //if (length < 128) {
       this.writeUInt8(SIA_TYPES.string8);
       const byteLength = this.writeString(string, this.offset + 1);
@@ -87,232 +90,233 @@ class Sia {
       this.offset += byteLength + 4;
     }
   }
-  addRef(ref) {
-    if (ref < 0x100) {
-      this.writeUInt8(SIA_TYPES.ref8);
-      this.writeUInt8(ref);
-    } else if (ref < 0x10000) {
-      this.writeUInt8(SIA_TYPES.ref16);
-      this.writeUInt16(ref);
-    } else if (ref < 0x100000000) {
-      this.writeUInt8(SIA_TYPES.ref32);
-      this.writeUInt32(ref);
+}
+addRef(ref) {
+  if (ref < 0x100) {
+    this.writeUInt8(SIA_TYPES.ref8);
+    this.writeUInt8(ref);
+  } else if (ref < 0x10000) {
+    this.writeUInt8(SIA_TYPES.ref16);
+    this.writeUInt16(ref);
+  } else if (ref < 0x100000000) {
+    this.writeUInt8(SIA_TYPES.ref32);
+    this.writeUInt32(ref);
+  } else {
+    throw `Ref size ${ref} is too big`;
+  }
+}
+addNumber(number) {
+  // TODO: make this faster https://jsben.ch/26igA
+  if (Number.isInteger(number)) return this.addInteger(number);
+  return this.addFloat(number);
+}
+addInteger(number) {
+  if (number < 0) {
+    if (number >= -0x80) {
+      this.writeUInt8(SIA_TYPES.int8);
+      this.writeInt8(number);
+    } else if (number >= -0x8000) {
+      this.writeUInt8(SIA_TYPES.int16);
+      this.writeInt16(number);
+    } else if (number >= -0x80000000) {
+      this.writeUInt8(SIA_TYPES.int32);
+      this.writeInt32(number);
     } else {
-      throw `Ref size ${ref} is too big`;
+      this.addFloat(number);
+    }
+  } else {
+    if (number < 0x100) {
+      this.writeUInt8(SIA_TYPES.uint8);
+      this.writeUInt8(number);
+    } else if (number < 0x10000) {
+      this.writeUInt8(SIA_TYPES.uint16);
+      this.writeUInt16(number);
+    } else if (number < 0x100000000) {
+      this.writeUInt8(SIA_TYPES.uint32);
+      this.writeUInt32(number);
+    } else {
+      this.addFloat(number);
     }
   }
-  addNumber(number) {
-    // TODO: make this faster https://jsben.ch/26igA
-    if (Number.isInteger(number)) return this.addInteger(number);
-    return this.addFloat(number);
+}
+addFloat(number) {
+  this.writeUInt8(SIA_TYPES.float64);
+  this.writeDouble(number);
+}
+startArray(length) {
+  if (length < 0x100) {
+    this.writeUInt8(SIA_TYPES.array8);
+    this.writeUInt8(length);
+  } else if (length < 0x10000) {
+    this.writeUInt8(SIA_TYPES.array16);
+    this.writeUInt16(length);
+  } else if (length < 0x100000000) {
+    this.writeUInt8(SIA_TYPES.array32);
+    this.writeUInt32(length);
+  } else {
+    throw `Array of size ${length} is too big to serialize`;
   }
-  addInteger(number) {
-    if (number < 0) {
-      if (number >= -0x80) {
-        this.writeUInt8(SIA_TYPES.int8);
-        this.writeInt8(number);
-      } else if (number >= -0x8000) {
-        this.writeUInt8(SIA_TYPES.int16);
-        this.writeInt16(number);
-      } else if (number >= -0x80000000) {
-        this.writeUInt8(SIA_TYPES.int32);
-        this.writeInt32(number);
-      } else {
-        this.addFloat(number);
+}
+startObject() {
+  this.writeUInt8(SIA_TYPES.objectStart);
+}
+endObject() {
+  this.writeUInt8(SIA_TYPES.objectEnd);
+}
+startMap() {
+  this.writeUInt8(SIA_TYPES.mapStart);
+}
+endMap() {
+  this.writeUInt8(SIA_TYPES.mapEnd);
+}
+startSet() {
+  this.writeUInt8(SIA_TYPES.setStart);
+}
+endSet() {
+  this.writeUInt8(SIA_TYPES.setEnd);
+}
+addBoolean(bool) {
+  const type = bool ? SIA_TYPES.true : SIA_TYPES.false;
+  this.writeUInt8(type);
+}
+addNull() {
+  this.writeUInt8(SIA_TYPES.null);
+}
+addUndefined() {
+  this.writeUInt8(SIA_TYPES.undefined);
+}
+addCustomType(item, constructor) {
+  const { args, code } = this.itemToSia(item, constructor);
+  if (code < 0x100) {
+    this.writeUInt8(SIA_TYPES.constructor8);
+    this.writeUInt8(code);
+  } else if (code < 0x10000) {
+    this.writeUInt8(SIA_TYPES.constructor16);
+    this.writeUInt16(code);
+  } else if (code < 0x100000000) {
+    this.writeUInt8(SIA_TYPES.constructor32);
+    this.writeUInt32(code);
+  } else {
+    throw `Code ${code} too big for a constructor`;
+  }
+  this.serializeItem(args);
+}
+serializeItem(item) {
+  const type = typeof item;
+  switch (type) {
+    case "string":
+      this.addString(item);
+      return;
+
+    case "undefined":
+      this.addUndefined(item);
+      return;
+
+    case "number":
+      this.addNumber(item);
+      return;
+
+    case "boolean":
+      this.addBoolean(item);
+      return;
+
+    case "object": {
+      if (item === null) {
+        this.addNull(item);
+        return;
       }
-    } else {
-      if (number < 0x100) {
-        this.writeUInt8(SIA_TYPES.uint8);
-        this.writeUInt8(number);
-      } else if (number < 0x10000) {
-        this.writeUInt8(SIA_TYPES.uint16);
-        this.writeUInt16(number);
-      } else if (number < 0x100000000) {
-        this.writeUInt8(SIA_TYPES.uint32);
-        this.writeUInt32(number);
-      } else {
-        this.addFloat(number);
-      }
-    }
-  }
-  addFloat(number) {
-    this.writeUInt8(SIA_TYPES.float64);
-    this.writeDouble(number);
-  }
-  startArray(length) {
-    if (length < 0x100) {
-      this.writeUInt8(SIA_TYPES.array8);
-      this.writeUInt8(length);
-    } else if (length < 0x10000) {
-      this.writeUInt8(SIA_TYPES.array16);
-      this.writeUInt16(length);
-    } else if (length < 0x100000000) {
-      this.writeUInt8(SIA_TYPES.array32);
-      this.writeUInt32(length);
-    } else {
-      throw `Array of size ${length} is too big to serialize`;
-    }
-  }
-  startObject() {
-    this.writeUInt8(SIA_TYPES.objectStart);
-  }
-  endObject() {
-    this.writeUInt8(SIA_TYPES.objectEnd);
-  }
-  startMap() {
-    this.writeUInt8(SIA_TYPES.mapStart);
-  }
-  endMap() {
-    this.writeUInt8(SIA_TYPES.mapEnd);
-  }
-  startSet() {
-    this.writeUInt8(SIA_TYPES.setStart);
-  }
-  endSet() {
-    this.writeUInt8(SIA_TYPES.setEnd);
-  }
-  addBoolean(bool) {
-    const type = bool ? SIA_TYPES.true : SIA_TYPES.false;
-    this.writeUInt8(type);
-  }
-  addNull() {
-    this.writeUInt8(SIA_TYPES.null);
-  }
-  addUndefined() {
-    this.writeUInt8(SIA_TYPES.undefined);
-  }
-  addCustomType(item, constructor) {
-    const { args, code } = this.itemToSia(item, constructor);
-    if (code < 0x100) {
-      this.writeUInt8(SIA_TYPES.constructor8);
-      this.writeUInt8(code);
-    } else if (code < 0x10000) {
-      this.writeUInt8(SIA_TYPES.constructor16);
-      this.writeUInt16(code);
-    } else if (code < 0x100000000) {
-      this.writeUInt8(SIA_TYPES.constructor32);
-      this.writeUInt32(code);
-    } else {
-      throw `Code ${code} too big for a constructor`;
-    }
-    this.serializeItem(args);
-  }
-  serializeItem(item) {
-    const type = typeof item;
-    switch (type) {
-      case "string":
-        this.addString(item);
-        return;
-
-      case "undefined":
-        this.addUndefined(item);
-        return;
-
-      case "number":
-        this.addNumber(item);
-        return;
-
-      case "boolean":
-        this.addBoolean(item);
-        return;
-
-      case "object": {
-        if (item === null) {
-          this.addNull(item);
+      const { constructor } = item;
+      switch (constructor) {
+        case Object: {
+          this.startObject();
+          for (const key in item) {
+            const ref = this.map.get(key);
+            if (!ref) {
+              this.map.set(key, this.strings++);
+              this.addString(key);
+            } else {
+              this.addRef(ref);
+            }
+            this.serializeItem(item[key]);
+          }
+          this.endObject();
           return;
         }
-        const { constructor } = item;
-        switch (constructor) {
-          case Object: {
-            this.startObject();
-            for (const key in item) {
-              const ref = this.map.get(key);
-              if (!ref) {
-                this.map.set(key, this.strings++);
-                this.addString(key);
-              } else {
-                this.addRef(ref);
-              }
-              this.serializeItem(item[key]);
-            }
-            this.endObject();
-            return;
-          }
 
-          case Array: {
-            this.startArray(item.length);
-            for (const member of item) {
-              this.serializeItem(member);
-            }
-            return;
+        case Array: {
+          this.startArray(item.length);
+          for (const member of item) {
+            this.serializeItem(member);
           }
-
-          case Set: {
-            this.startSet();
-            for (const member of item) {
-              this.serializeItem(member);
-            }
-            this.endSet();
-            return;
-          }
-
-          case Map: {
-            this.startMap();
-            for (const [key, value] of item) {
-              this.serializeItem(key);
-              this.serializeItem(value);
-            }
-            this.endMap();
-            return;
-          }
-
-          case Buffer: {
-            const { length } = item;
-            if (item.length < 0x100) {
-              this.writeUInt8(SIA_TYPES.bin8);
-              this.writeUInt8(length);
-              item.copy(this.buffer, this.offset);
-              this.offset += length;
-            } else if (item.length < 0x10000) {
-              this.writeUInt8(SIA_TYPES.bin16);
-              this.writeUInt16(length);
-              item.copy(this.buffer, this.offset);
-              this.offset += length;
-            } else if (item.length < 0x100000000) {
-              this.writeUInt8(SIA_TYPES.bin32);
-              this.writeUInt32(length);
-              item.copy(this.buffer, this.offset);
-              this.offset += length;
-            } else {
-              throw `Buffer of size ${length} is too big to serialize`;
-            }
-            return;
-          }
-
-          default:
-            this.addCustomType(item, constructor);
-            return;
+          return;
         }
+
+        case Set: {
+          this.startSet();
+          for (const member of item) {
+            this.serializeItem(member);
+          }
+          this.endSet();
+          return;
+        }
+
+        case Map: {
+          this.startMap();
+          for (const [key, value] of item) {
+            this.serializeItem(key);
+            this.serializeItem(value);
+          }
+          this.endMap();
+          return;
+        }
+
+        case Buffer: {
+          const { length } = item;
+          if (item.length < 0x100) {
+            this.writeUInt8(SIA_TYPES.bin8);
+            this.writeUInt8(length);
+            item.copy(this.buffer, this.offset);
+            this.offset += length;
+          } else if (item.length < 0x10000) {
+            this.writeUInt8(SIA_TYPES.bin16);
+            this.writeUInt16(length);
+            item.copy(this.buffer, this.offset);
+            this.offset += length;
+          } else if (item.length < 0x100000000) {
+            this.writeUInt8(SIA_TYPES.bin32);
+            this.writeUInt32(length);
+            item.copy(this.buffer, this.offset);
+            this.offset += length;
+          } else {
+            throw `Buffer of size ${length} is too big to serialize`;
+          }
+          return;
+        }
+
+        default:
+          this.addCustomType(item, constructor);
+          return;
       }
     }
   }
-  itemToSia(item, constructor) {
-    for (const entry of this.constructors) {
-      if (entry.constructor === constructor) {
-        return {
-          code: entry.code,
-          args: entry.args(item),
-        };
-      }
+}
+itemToSia(item, constructor) {
+  for (const entry of this.constructors) {
+    if (entry.constructor === constructor) {
+      return {
+        code: entry.code,
+        args: entry.args(item),
+      };
     }
-    throw `Serialization of item ${item} is not supported`;
   }
-  serialize(data) {
-    this.data = data;
-    this.reset();
-    this.serializeItem(this.data);
-    return this.buffer.slice(0, this.offset);
-  }
+  throw `Serialization of item ${item} is not supported`;
+}
+serialize(data) {
+  this.data = data;
+  this.reset();
+  this.serializeItem(this.data);
+  return this.buffer.slice(0, this.offset);
+}
 }
 
 class DeSia {
@@ -511,7 +515,7 @@ class DeSia {
 
       case SIA_TYPES.mapStart: {
         const map = new Map();
-        let curr = this.buffer[this.offset++];
+        let curr = this.buffer[this.offset];
         while (curr !== SIA_TYPES.mapEnd) {
           map.set(this.readBlock(), this.readBlock());
           curr = this.buffer[this.offset];
@@ -521,7 +525,7 @@ class DeSia {
 
       case SIA_TYPES.setStart: {
         const set = new Set();
-        let curr = this.buffer[this.offset++];
+        let curr = this.buffer[this.offset];
         while (curr !== SIA_TYPES.setEnd) {
           set.add(this.readBlock());
           curr = this.buffer[this.offset];

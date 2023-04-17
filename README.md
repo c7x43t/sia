@@ -1,6 +1,19 @@
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/61f392c96c49481ba4c7d3f109db2fdc)](https://www.codacy.com/gh/pouya-eghbali/sia/dashboard?utm_source=github.com&utm_medium=referral&utm_content=pouya-eghbali/sia&utm_campaign=Badge_Grade)
 [![codecov](https://codecov.io/gh/pouya-eghbali/sia/branch/master/graph/badge.svg?token=PCX0CJEW0A)](https://codecov.io/gh/pouya-eghbali/sia)
 
+# What is new
+This is a fork from the original [Sia](https://www.npmjs.com/package/sializer). Sia enables binary de-/serialization of arbitrary javascript data.
+- Fixed a bug with Map serialization
+- typed Arrays support added
+- Objects of primitive Types (Boolean/Number/String) support added
+- Object null prototype support added
+- BigInt support added
+- Circular datastructures support added (Map/Set/Array/Object can be self referencing)
+- Autogrowing buffers (this degraded performance, but Sia is still faster than JSON)
+- Replaced utfz-lib with [@valentech/utfz-lib](https://www.npmjs.com/package/@valentech/utfz-lib)
+
+In short: Sia can now handle all Javascript datatypes and won't overflow if the input is large, while still being faster than JSON.
+
 # Sia
 
 Sia - Binary serialisation and deserialisation with built-in compression. You can consider Sia a strongly typed,
@@ -9,6 +22,8 @@ statically typed domain specific binary language for constructing data. Sia pres
 Please note the Sia specification and implementation isn't final yet. As a core part of
 [Clio programming language](https://github.com/clio-lang/clio), Sia evolves with Clio. It is made to make
 fast RPC calls possible.
+
+
 
 ## Why
 

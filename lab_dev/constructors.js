@@ -1,4 +1,4 @@
-module.exports = [
+export default [
   {
     constructor: RegExp,
     code: 0,

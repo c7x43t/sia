@@ -26,7 +26,7 @@ const typeNames = [
   "ref64",
   "ref128",
   "refn",
-  "utfz",
+  "cachedString",
   "string8",
   "string16",
   "string32",
@@ -51,6 +51,11 @@ const typeNames = [
   "array32",
   "array64",
   "array128",
+  "array8",
+  "array16",
+  "array32",
+  "array64",
+  "array128",
   "objectStart",
   "objectEnd",
   "setStart",
@@ -61,4 +66,12 @@ const typeNames = [
 
 const types = Object.fromEntries(typeNames.map((name, index) => [name, index]));
 
-module.exports = types;
+export default types;
+
+/* for (const [name, index] of Object.entries(types)) {
+  console.log(
+    `| ${name.padEnd(16, " ")} | ${index.toString().padEnd(8, " ")} |0b${index
+      .toString(2)
+      .padStart(8, "0")} | 0x${index.toString(16).padEnd(2, " ")} |`
+  );
+} */

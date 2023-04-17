@@ -1,12 +1,16 @@
-const fetch = require("node-fetch");
-const prettyBytes = require("pretty-bytes");
-const msgpackr = require("msgpackr");
-const cborX = require("cbor-x");
-const Table = require("cli-table3");
-const { sia, desia } = require("..");
-const lab = require("../lab/index");
-const assert = require("assert");
-const { diff } = require("deep-diff");
+import fetch from "node-fetch";
+import prettyBytes from "pretty-bytes";
+import { unpack, pack } from "msgpackr";
+const msgpackr = { unpack, pack }
+import { encode, decode } from "cbor-x";
+const cborX = { encode, decode }
+import Table from "cli-table3";
+import { sia, desia } from "../index.js";
+import lab from "../lab/index.js";
+// import lab2 from "../lab/index.js";
+import lab_dev from "../lab_dev/index.js"
+import assert from "assert";
+import diff from "deep-diff";
 
 const runTests = (data, samples) => {
   const table = new Table({
@@ -28,15 +32,16 @@ const runTests = (data, samples) => {
     let serialized;
     let result;
     while (n--) {
-      const serstart = process.cpuUsage();
+      const serstart = process.hrtime.bigint();
       serialized = serialize(data);
-      const serend = process.cpuUsage(serstart);
-      const deserstart = process.cpuUsage();
+      const serend = Number(process.hrtime.bigint() - serstart);
+      const deserstart = process.hrtime.bigint();
       result = deserialize(serialized);
-      const deserend = process.cpuUsage(deserstart);
-      serTimes.push(serend.user);
-      deserTimes.push(deserend.user);
+      const deserend = Number(process.hrtime.bigint() - deserstart);
+      serTimes.push(serend);
+      deserTimes.push(deserend);
     }
+    // console.log(serTimes)
     const medSer = Math.min(...serTimes);
     const medDeser = Math.min(...deserTimes);
     const byteSize = serialized.length;
@@ -65,8 +70,10 @@ const runTests = (data, samples) => {
   );
 
   bench(sia, desia, "Sia");
-  bench(lab.sia, lab.desia, "Sia Lab");
+  // bench(lab.sia, lab.desia, "Sia Lab");
 
+  // // bench(lab2.sia, lab2.desia, "Sia Lab2");
+  // bench(lab_dev.sia, lab_dev.desia, "Sia Dev");
   bench(msgpackr.pack, msgpackr.unpack, "MessagePack");
   bench((data) => cborX.encode(data), cborX.decode, "CBOR-X");
   console.log();
@@ -94,22 +101,22 @@ const runTests = (data, samples) => {
 const dataset = [
   {
     title: "Tiny file",
-    url: "https://jsonplaceholder.typicode.com/users/1",
+    url: "https://jsonplaceholder.typicode.com/users/1", // Sia, MessagePack
     samples: 10000,
   },
   {
     title: "Small file",
-    url: "https://jsonplaceholder.typicode.com/comments",
+    url: "https://jsonplaceholder.typicode.com/comments", // Sia, MessagePack
     samples: 1000,
   },
   {
     title: "Large file",
-    url: "https://jsonplaceholder.typicode.com/photos",
+    url: "https://jsonplaceholder.typicode.com/photos", // Sia Dev, Messagepack
     samples: 1000,
   },
   {
     title: "Monster file",
-    url: "https://github.com/json-iterator/test-data/raw/master/large-file.json",
+    url: "https://github.com/json-iterator/test-data/raw/master/large-file.json", // Sia
     samples: 100,
   },
 ];
