@@ -1,0 +1,7 @@
+{
+    "parse": { "ecma": 2020 },
+    "compress": { "ecma": 2020 },
+    "mangle": { "ecma": 2020 },
+    "output": { "ecma": 2020 }
+  }
+  

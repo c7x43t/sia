@@ -1,15 +1,25 @@
 {
   "name": "@valentech/sializer",
-  "version": "0.3.0",
+  "version": "0.3.8",
   "description": "",
   "main": "index.js",
+  "module": "./dist/bundle.esm.js",
+  "browser": "./dist/bundle.min.js",
+  "exports": {
+    ".": {
+      "import": "./dist/bundle.esm.js",
+      "require": "./dist/bundle.cjs.js"
+    }
+  },
   "url": "https://github.com/c7x43t/sia",
   "scripts": {
     "test": "jest --collect-coverage",
     "test:nocov": "jest",
     "benchmark": "node benchmark/benchmark.js",
     "lint:check": "prettier --check . && eslint .",
-    "lint:fix": "prettier --write ."
+    "lint:fix": "prettier --write .",
+    "build:parcel": "parcel build index.js",
+    "build": "rollup -c"
   },
   "type": "module",
   "keywords": [],
@@ -17,7 +27,12 @@
   "license": "Apache-2.0",
   "devDependencies": {
     "@protobufjs/utf8": "^1.1.0",
+    "@rollup/plugin-commonjs": "^28.0.2",
+    "@rollup/plugin-inject": "^5.0.5",
+    "@rollup/plugin-node-resolve": "^16.0.0",
+    "@rollup/plugin-terser": "^0.4.4",
     "benchmark": "^2.1.4",
+    "buffer": "^6.0.3",
     "cbor-x": "^1.5.2",
     "cli-table3": "^0.6.0",
     "deep-diff": "^1.0.2",
@@ -30,13 +45,13 @@
     "lzutf8": "^0.6.0",
     "msgpackr": "^1.8.5",
     "node-fetch": "^2.6.1",
+    "parcel": "^2.13.3",
     "prettier": "^2.3.2",
     "pretty-bytes": "^5.4.0",
+    "rollup": "^4.34.7",
+    "rollup-plugin-polyfill-node": "^0.13.0",
     "stats-lite": "^2.2.0",
     "utf8-buffer": "^1.0.0"
   },
-  "dependencies": {
-    "@valentech/utfz-lib": "^0.2.1",
-    "buffer": "^5.6.0"
-  }
+  "dependencies": {}
 }
