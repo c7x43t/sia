@@ -546,18 +546,18 @@ test(
     const deserialized = desia(serialized);
 
     // Write the original data to 'original.json'
-    fs.writeFileSync(
-      "original.json",
-      JSON.stringify(data, null, 2),
-      "utf8"
-    );
+    // fs.writeFileSync(
+    //   "original.json",
+    //   JSON.stringify(data, null, 2),
+    //   "utf8"
+    // );
 
-    // Write the deserialized data to 'deserialized.json'
-    fs.writeFileSync(
-      "deserialized.json",
-      JSON.stringify(deserialized, null, 2),
-      "utf8"
-    );
+    // // Write the deserialized data to 'deserialized.json'
+    // fs.writeFileSync(
+    //   "deserialized.json",
+    //   JSON.stringify(deserialized, null, 2),
+    //   "utf8"
+    // );
 
     console.log("Files written to disk.");
     expect(deepEqual(deserialized, data)).toBe(true);
